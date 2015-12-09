@@ -8,15 +8,31 @@
 #include <math.h>
 #include <unistd.h>
 #include "gfx4.h"
+#define DELTAT 10000
 
 void setupWindow(int xSize, int ySize);
 void drawShip(int xPos, int yPos, double angle);
+void drawAsteroid(double direction, int xLoc, int yLoc, int speed, int radius);
+void handleAsteroid();
+
+struct Asteroids {
+	int xLoc;
+	int yLoc;
+	int speed;
+	int radius;
+	double direction;
+};
 
 int main() {
 	int xSize = 350, ySize = 350, i = 1, dir = (M_PI) / 2; //The window size we determined was best
 	char c;
 	double angle = .75;
 	int shipXPos = 175, shipYPos = 175;
+
+	struct Asteroids info[4];
+	int count;
+	for (count = 0; count < 4; count++)
+		handleAsteroid(info[count]);
 	setupWindow(xSize, ySize);
 	drawShip(xSize / 2, ySize / 2, dir);
 	while (i) {
@@ -82,4 +98,9 @@ void drawShip(int xPos, int yPos, double angle) {
 	for (i = 0; i < 3; i++)
 		gfx_line(xPos+8*cos((i+angle)*n), yPos-8*sin((i+angle)*n), 
 				xPos+8*cos((i+1+angle)*n), yPos-8*sin((i+1+angle)*n));
+}
+
+// This function draws the asteroids and assigns them an initial velocity
+void drawAsteroid(double direction,int xLoc, int yLoc, int speed, int radius) {
+	gfx_circle(xLoc, yLoc, radius);
 }
