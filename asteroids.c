@@ -10,29 +10,31 @@
 #include "gfx4.h"
 #define DELTAT 10000
 
-void setupWindow(int xSize, int ySize);
-void drawShip(int xPos, int yPos, double angle);
-void drawAsteroid(double direction, int xLoc, int yLoc, int speed, int radius);
-void handleAsteroid();
-
-struct Asteroids {
+typedef struct Asteroids {
 	int xLoc;
 	int yLoc;
 	int speed;
 	int radius;
-	double direction;
-};
+} Asteroids;
+
+void setupWindow(int xSize, int ySize);
+void drawShip(int xPos, int yPos, double dir);
+void drawAsteroid(int xLoc, int yLoc, int radius);
+void handleAsteroid(struct Asteroids *bigAsteroids);
 
 int main() {
-	int xSize = 350, ySize = 350, i = 1, dir = (M_PI) / 2; //The window size we determined was best
+	int xSize = 350, ySize = 350, i = 1;
+	double dir = (M_PI) / 2; //The window size we determined was best
 	char c;
 	double angle = .75;
 	int shipXPos = 175, shipYPos = 175;
 
-	struct Asteroids info[4];
-	int count;
-	for (count = 0; count < 4; count++)
-		handleAsteroid(info[count]);
+	Asteroids bigAsteroids[4];
+	
+	//int count;
+	//for (count = 0; count < 4; count++)
+	handleAsteroid(bigAsteroids);
+	
 	setupWindow(xSize, ySize);
 	drawShip(xSize / 2, ySize / 2, dir);
 	while (i) {
@@ -42,9 +44,9 @@ int main() {
 			case 'w' : 	// move space ship forward
 				gfx_clear();
 				//no change in direction
-				shipXPos += (int) 2 * cos(dir);
-				shipYPos -= (int) 2 * sin(dir);
-				drawShip(shipXPos, shipYPos, angle);
+				shipXPos += (int) 5 * cos(dir);
+				shipYPos -= (int) 5 * sin(dir);
+				drawShip(shipXPos, shipYPos, dir);
 				break;
 			case 'a' : 	// rotate space ship left
 				gfx_clear();
@@ -52,7 +54,7 @@ int main() {
 				// x and y position doesn't change
 				dir += (M_PI) / 6;
 				angle += .25;
-				drawShip(shipXPos, shipYPos, angle);
+				drawShip(shipXPos, shipYPos, dir);
 				break;
 			case 'd' : 	// rotate space ship right
 				gfx_clear();
@@ -60,25 +62,25 @@ int main() {
 				// x and y position doesn't change
 				dir -= (M_PI) / 6;
 				angle -= .25;
-				drawShip(shipXPos, shipYPos, angle);
+				drawShip(shipXPos, shipYPos, dir);
 				break;
 			case 's' :	// brake space ship
-				gfx_clear();
+				//	gfx_clear();
 				break;
 			case 'q' :
 				i = 0;
 				break;
 		}
-	/*	
+		
 		if (shipXPos >= 350)
 			shipXPos = 1;
 		if (shipXPos <= 0)
 			shipXPos = 349;
-		if (shipYPos >= 350);
+		if (shipYPos >= 350)
 			shipYPos = 1;
-		if (shipYPos <= 0);
+		if (shipYPos <= 0)
 			shipYPos = 349;
-	*/
+	
 		gfx_flush();
 	}
 
@@ -92,15 +94,26 @@ void setupWindow(int xSize, int ySize) {
 }
 
 // This function draws the ship at the specified location
-void drawShip(int xPos, int yPos, double angle) {
+void drawShip(int xPos, int yPos, double dir) {
 	double n = (2 * M_PI) / 3;
 	int i;
 	for (i = 0; i < 3; i++)
-		gfx_line(xPos+8*cos((i+angle)*n), yPos-8*sin((i+angle)*n), 
-				xPos+8*cos((i+1+angle)*n), yPos-8*sin((i+1+angle)*n));
+		gfx_line(xPos+8*cos((i*n)+dir), yPos-8*sin((i*n)+dir), 
+				xPos+8*cos(((i+1)*n)+dir), yPos-8*sin(((i+1)*n)+dir));
 }
 
 // This function draws the asteroids and assigns them an initial velocity
-void drawAsteroid(double direction,int xLoc, int yLoc, int speed, int radius) {
+void drawAsteroid(int xLoc, int yLoc, int radius) {
 	gfx_circle(xLoc, yLoc, radius);
+}
+
+void handleAsteroid(Asteroids *bigAsteroids) {
+	int i;
+	for (i = 0; i < 4; i++) {
+		bigAsteroids[i].xLoc = (rand() % 350);
+		bigAsteroids[i].yLoc = 0;
+		bigAsteroids[i].speed = (rand() % 4);
+		bigAsteroids[i].radius = (rand() % 20) + 10;
+		drawAsteroid(bigAsteroids[i].xLoc, bigAsteroids[i].yLoc, bigAsteroids[i].radius);
+	}
 }
