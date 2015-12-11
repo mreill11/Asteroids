@@ -24,8 +24,15 @@ void drawAsteroid(int xLoc, int yLoc, int radius);
 void animateBullet(int n, double bullets[40][4]);
 
 int main() {
-	int xSize = 350, ySize = 350, i = 1, shipSpeed = 3;
-	double dir = (M_PI) / 2; //The window size we determined was best
+	int xSize = 350, ySize = 350, i = 1, shipSpeed = 0;
+	int circleX = (rand() % 350);
+	int circleY = (rand() % 350);
+	int circleXDirection = (rand() % 12) - 6, circleYDirection = (rand() % 12) - 6;
+	int radius = 12;
+	int count = 1, j = 0, numLives = 3;
+	if (abs(circleX - 175) < 15 && abs(circleY - 175) < 15)
+		circleX = 35;
+	double dir = (M_PI) / 2;
 	char c;
 	double angle = .75;
 	int shipXPos = 175, shipYPos = 175;
@@ -33,15 +40,42 @@ int main() {
 	int numBulletsActive = 0;
 
 	//	struct Asteroids bigAsteroids[4];
-	
 	//	handleAsteroid(bigAsteroids[0]);
 	
 	setupWindow(xSize, ySize);
 	drawShip(xSize / 2, ySize / 2, dir);
+	gfx_circle(circleX, circleY, radius);
 	while (i) {
 		gfx_clear();
+		gfx_text(290, 340, "Lives: ");
+		switch (numLives) {
+			case 3 :
+				gfx_text(340, 340, "3");
+				break;
+			case 2 :
+				gfx_text(340, 340, "2");
+				break;
+			case 1 :
+				gfx_text(340, 340, "1");
+				break;
+		}
+		circleX += circleXDirection;
+		circleY += circleYDirection;
+		gfx_circle(circleX, circleY, radius);
+		if (j % 10 == 0) {
+			if (radius > 24)
+				count = -1;
+			else if (radius < 11)
+				count = 1;
+			radius += count;
+		}
+		j++;
+		if (circleX - radius <= 0 || circleX + radius >= xSize)
+			circleXDirection = -circleXDirection;
+		if (circleY - radius <= 0 || circleY + radius >= ySize)
+			circleYDirection = -circleYDirection;
 		drawShip(shipXPos, shipYPos, dir);
-		animateBullet(numBulletsActive, bullets);
+		//animateBullet(numBulletsActive, bullets);
 		
 		if (shipXPos >= 350)
 			shipXPos = 1;
@@ -53,6 +87,17 @@ int main() {
 			shipYPos = 349;
 		//printf("%c\n", c);
 		
+		if (shipXPos > (circleX - radius) && shipXPos < (circleX + radius) && shipYPos > (circleY - radius) && shipYPos < (circleY + radius)) {
+			usleep(1000);
+			numLives--;
+			char c = gfx_wait();
+			if (c == ' ')
+				continue;
+		} 
+
+		if (numLives == 0)
+			i = 0;
+
 		usleep(DELTAT);
 		if (gfx_event_waiting()) {
 			c = gfx_wait();
@@ -63,7 +108,7 @@ int main() {
 					bullets[numBulletsActive][1] = (double) shipYPos;
 					bullets[numBulletsActive][2] = dir;
 					bullets[numBulletsActive][3] = 1;
-					//animateBullet(numBulletsActive, bullets);
+					animateBullet(numBulletsActive, bullets);
 					numBulletsActive++;
 					break;
 				case 'R' : 	// move space ship forward
@@ -71,8 +116,6 @@ int main() {
 					//no change in direction
 					if (shipSpeed <= 8)
 						shipSpeed++;
-					shipXPos += (int) shipSpeed * cos(dir);
-					shipYPos -= (int) shipSpeed * sin(dir);
 					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'Q' : 	// rotate space ship left
@@ -80,7 +123,6 @@ int main() {
 					// adjust dir to reflect leftward rotation
 					// x and y position doesn't change
 					dir += (M_PI) / 6;
-					angle += .25;
 					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'S' : 	// rotate space ship right
@@ -88,18 +130,12 @@ int main() {
 					// adjust dir to reflect rightward rotation
 					// x and y position doesn't change
 					dir -= (M_PI) / 6;
-					angle -= .25;
 					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'T' :	// brake space ship
 					//	gfx_clear();
-					shipSpeed--;
-					if (shipSpeed > 0) {
-						shipXPos += (int) shipSpeed * cos(dir);
-						shipYPos -= (int) shipSpeed * sin(dir);
-					} else {
-						shipSpeed = 3;
-					}
+					if (shipSpeed > 0) 
+						shipSpeed--;
 					break;
 				case 'q' :
 					i = 0;
@@ -107,6 +143,9 @@ int main() {
 			}
 		}
 		
+		shipXPos += (int) shipSpeed * cos(dir);
+		shipYPos -= (int) shipSpeed * sin(dir);		
+
 		gfx_flush();
 	}
 
@@ -123,9 +162,14 @@ void setupWindow(int xSize, int ySize) {
 void drawShip(int xPos, int yPos, double dir) {
 	double n = (2 * M_PI) / 3;
 	int i;
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++) {
+		if (i == 1) 
+			gfx_color(255, 0, 0);
+		else 
+			gfx_color(0, 255, 0);
 		gfx_line(xPos+8*cos((i*n)+dir), yPos-8*sin((i*n)+dir), 
 				xPos+8*cos(((i+1)*n)+dir), yPos-8*sin(((i+1)*n)+dir));
+	}
 }
 
 // This function draws the asteroids and assigns them an initial velocity
@@ -145,13 +189,20 @@ void handleAsteroid(struct Asteroids bigAsteroids) {
 }
 */
 void animateBullet(int n, double bullets[40][4]) {
-	int x = (int) bullets[n][0];
-	int y = (int) bullets[n][1];
-	double dir = bullets[n][2];
-	int active = (int) bullets[n][3];
-	if (active) {
-		gfx_line(x - 8 * cos(dir), y - 8 * sin(dir), x - 12 * cos(dir), y - 12 * sin(dir));
-		bullets[n][0] += 8 * cos(dir);
-		bullets[n][1] += 8 * sin(dir);
+	int i = 0;
+	while (i <= n) {
+		int x = (int) bullets[n][0];
+		int y = (int) bullets[n][1];
+		double dir = bullets[n][2];
+		int active = (int) bullets[n][3];
+		if (active) {
+			gfx_line(x, y, x - 12 * cos(dir), y - 12 * sin(dir));
+			bullets[n][0] += 8 * cos(dir);
+			bullets[n][1] += 8 * sin(dir);
+		}
+		if (bullets[n][0] > 350 || bullets[n][0] < 0)
+			bullets[n][3] = 0;
+		if (bullets[n][1] > 350 || bullets[n][1] < 0)
+			bullets[n][3] = 0;
 	}
 }
