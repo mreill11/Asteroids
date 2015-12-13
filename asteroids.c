@@ -10,28 +10,31 @@
 #include "gfx4.h"
 #define DELTAT 10000
 
-struct Asteroids {
-	int xLoc;
-	int yLoc;
-	int speed;
-	int radius;
-};
-
 void setupWindow(int xSize, int ySize);
 void drawShip(int xPos, int yPos, double dir);
-void drawAsteroid(int xLoc, int yLoc, int radius);
-//void handleAsteroid(struct Asteroids);
-void animateBullet(int n, double bullets[40][4]);
+void endGame(int *game, int *gL);
+void newGame();
+//void newLife();
+void adjustLivesTicker(int n);
+void wrapShipAround(int *x, int *y);
+int varyRadius(int c, int j, int r);
 
 int main() {
+	int gameLive = 1;
+	int *gL = &gameLive;
+	setupWindow(350, 350);
+	while (gameLive) {
 	int xSize = 350, ySize = 350, i = 1, shipSpeed = 0;
+	int *game = &i;
 	int circleX = (rand() % 350);
 	int circleY = (rand() % 350);
 	int circleXDirection = (rand() % 12) - 6, circleYDirection = (rand() % 12) - 6;
 	int radius = 12;
 	int count = 1, j = 0, numLives = 3;
+
 	if (abs(circleX - 175) < 15 && abs(circleY - 175) < 15)
 		circleX = 35;
+
 	double dir = (M_PI) / 2;
 	char c;
 	double angle = .75;
@@ -39,101 +42,65 @@ int main() {
 	double bullets[40][4];
 	int numBulletsActive = 0;
 
-	//	struct Asteroids bigAsteroids[4];
-	//	handleAsteroid(bigAsteroids[0]);
+	int *x = &shipXPos, *y = &shipYPos;
 	
-	setupWindow(xSize, ySize);
 	drawShip(xSize / 2, ySize / 2, dir);
 	gfx_circle(circleX, circleY, radius);
+
 	while (i) {
 		gfx_clear();
-		gfx_text(290, 340, "Lives: ");
-		switch (numLives) {
-			case 3 :
-				gfx_text(340, 340, "3");
-				break;
-			case 2 :
-				gfx_text(340, 340, "2");
-				break;
-			case 1 :
-				gfx_text(340, 340, "1");
-				break;
-		}
+		
+		adjustLivesTicker(numLives);
+		
 		circleX += circleXDirection;
 		circleY += circleYDirection;
+
 		gfx_circle(circleX, circleY, radius);
-		if (j % 10 == 0) {
-			if (radius > 24)
-				count = -1;
-			else if (radius < 11)
-				count = 1;
-			radius += count;
-		}
+		
+		radius = varyRadius(count, j, radius);
 		j++;
+		
 		if (circleX - radius <= 0 || circleX + radius >= xSize)
 			circleXDirection = -circleXDirection;
 		if (circleY - radius <= 0 || circleY + radius >= ySize)
 			circleYDirection = -circleYDirection;
-		drawShip(shipXPos, shipYPos, dir);
-		//animateBullet(numBulletsActive, bullets);
 		
-		if (shipXPos >= 350)
-			shipXPos = 1;
-		if (shipXPos <= 0)
-			shipXPos = 349;
-		if (shipYPos >= 350)
-			shipYPos = 1;
-		if (shipYPos <= 0)
-			shipYPos = 349;
-		//printf("%c\n", c);
+		drawShip(shipXPos, shipYPos, dir);
+		
+		wrapShipAround(x, y);
 		
 		if (shipXPos > (circleX - radius) && shipXPos < (circleX + radius) && shipYPos > (circleY - radius) && shipYPos < (circleY + radius)) {
 			usleep(1000);
 			numLives--;
+			if (numLives == 0)
+				endGame(game, gL);
 			char c = gfx_wait();
-			if (c == ' ')
-				continue;
-		} 
-
-		if (numLives == 0)
-			i = 0;
+			gfx_text(150, 30, "Press space to continue");
+			//if (c == ' ')
+				//newLife();
+		}
 
 		usleep(DELTAT);
 		if (gfx_event_waiting()) {
 			c = gfx_wait();
 
 			switch (c) {
-				case ' ' :
-					bullets[numBulletsActive][0] = (double) shipXPos;
-					bullets[numBulletsActive][1] = (double) shipYPos;
-					bullets[numBulletsActive][2] = dir;
-					bullets[numBulletsActive][3] = 1;
-					animateBullet(numBulletsActive, bullets);
-					numBulletsActive++;
-					break;
 				case 'R' : 	// move space ship forward
-					//gfx_clear();
 					//no change in direction
 					if (shipSpeed <= 8)
 						shipSpeed++;
-					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'Q' : 	// rotate space ship left
-					//gfx_clear();
 					// adjust dir to reflect leftward rotation
 					// x and y position doesn't change
 					dir += (M_PI) / 6;
-					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'S' : 	// rotate space ship right
-					//gfx_clear();
 					// adjust dir to reflect rightward rotation
 					// x and y position doesn't change
 					dir -= (M_PI) / 6;
-					//drawShip(shipXPos, shipYPos, dir);
 					break;
 				case 'T' :	// brake space ship
-					//	gfx_clear();
 					if (shipSpeed > 0) 
 						shipSpeed--;
 					break;
@@ -149,6 +116,8 @@ int main() {
 		gfx_flush();
 	}
 
+
+	}
 }
 
 // This function initializes the window for gameplay
@@ -172,37 +141,65 @@ void drawShip(int xPos, int yPos, double dir) {
 	}
 }
 
-// This function draws the asteroids and assigns them an initial velocity
-void drawAsteroid(int xLoc, int yLoc, int radius) {
-	gfx_circle(xLoc, yLoc, radius);
-}
-/*
-void handleAsteroid(struct Asteroids bigAsteroids) {
-	int i = 0;
-	//for (i = 0; i < 4; i++) {
-		bigAsteroids.xLoc = (rand() % 350);
-		bigAsteroids.yLoc = 0;
-		bigAsteroids.speed = (rand() % 4);
-		bigAsteroids.radius = (rand() % 20) + 10;
-		drawAsteroid(bigAsteroids.xLoc, bigAsteroids.yLoc, bigAsteroids.radius);
-	//}
-}
-*/
-void animateBullet(int n, double bullets[40][4]) {
-	int i = 0;
-	while (i <= n) {
-		int x = (int) bullets[n][0];
-		int y = (int) bullets[n][1];
-		double dir = bullets[n][2];
-		int active = (int) bullets[n][3];
-		if (active) {
-			gfx_line(x, y, x - 12 * cos(dir), y - 12 * sin(dir));
-			bullets[n][0] += 8 * cos(dir);
-			bullets[n][1] += 8 * sin(dir);
-		}
-		if (bullets[n][0] > 350 || bullets[n][0] < 0)
-			bullets[n][3] = 0;
-		if (bullets[n][1] > 350 || bullets[n][1] < 0)
-			bullets[n][3] = 0;
+
+void endGame(int *game, int *gL) {
+	gfx_clear();
+	gfx_text(150, 100, "You died.");
+	gfx_text(150, 115, "Press space to play again");
+	gfx_text(150, 130, "Press q to quit.");
+	char c = gfx_wait();
+	switch (c) {
+		case 'q' :
+			*game = 0;
+			*gL = 0;
+			break;
+		case ' ' :
+			newGame();
+			break;
+		default :
+			*game = 0;
+			*gL = 0;
+			break;
 	}
+}
+
+void newGame() {
+	
+}
+
+void adjustLivesTicker(int n) {
+	gfx_text(290, 340, "Lives: ");
+	switch (n) {
+		case 3 :
+			gfx_text(340, 340, "3");
+			break;
+		case 2 :
+			gfx_text(340, 340, "2");
+			break;
+		case 1 :
+			gfx_text(340, 340, "1");
+			break;
+	}
+}
+
+void wrapShipAround(int *x, int *y) {
+	if (*x >= 350)
+		*x = 1;
+	if (*x <= 0)
+		*x = 349;
+	if (*y >= 350)
+		*y = 1;
+	if (*y <= 0)
+		*y = 349;
+}
+
+int varyRadius(int c, int j, int r) {
+	if (j % 10 == 0) {
+		if (r > 24)
+			c = -1;
+		else if (r < 11)
+			c = 1;
+		r += c;
+	}
+	return r;
 }
